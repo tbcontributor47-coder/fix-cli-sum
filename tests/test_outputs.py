@@ -15,6 +15,16 @@ def run_sum_cli(input_text: str) -> tuple[int, str, str]:
     return proc.returncode, proc.stdout, proc.stderr
 
 
+def run_sum_cli_on_missing_file() -> tuple[int, str, str]:
+    proc = subprocess.run(
+        ["python", "/app/sum_cli.py", "/tmp/does_not_exist_12345.txt"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return proc.returncode, proc.stdout, proc.stderr
+
+
 # Level 1: Basic functionality
 def test_sums_integers_including_negative_and_blanks() -> None:
     code, out, err = run_sum_cli("1\n 2\n\n-3\n")
@@ -64,3 +74,15 @@ def test_zero_sum() -> None:
     code, out, err = run_sum_cli("0\n0\n0\n")
     assert code == 0, err
     assert out == "SUM=0\n"
+
+
+# Level 4: Error handling
+def test_missing_file_non_zero_exit() -> None:
+    code, out, err = run_sum_cli_on_missing_file()
+    assert code != 0, "Should return non-zero exit code for missing file"
+
+
+def test_ignores_non_integer_lines() -> None:
+    code, out, err = run_sum_cli("5\nabc\n10\n12.5\nxyz\n3\n")
+    assert code == 0, err
+    assert out == "SUM=18\n", "Should sum valid integers (5+10+3) and skip non-integers"
