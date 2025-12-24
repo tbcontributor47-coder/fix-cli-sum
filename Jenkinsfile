@@ -19,8 +19,11 @@ pipeline {
   }
 
   stages {
+    /*
     stage('Prepare Workspace Permissions') {
       steps {
+        // The ACL stage was intentionally commented out for testing without host-side ACLs.
+        // If you want Jenkins to modify workspace ACLs, uncomment this block.
         sh '''#!/usr/bin/env bash
 set -euo pipefail
 
@@ -55,6 +58,7 @@ fi
 '''
       }
     }
+    */
 
     stage('Preflight') {
       steps {
