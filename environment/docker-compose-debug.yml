@@ -1,0 +1,15 @@
+services:
+  main:
+    build:
+      context: ../
+      dockerfile: environment/Dockerfile
+    image: fix-cli-sum-env:local
+    command: ["sh", "-c", "sleep 3600"]
+    volumes:
+      - fixcli-logs:/logs
+      - ../:/work:ro
+    working_dir: /work
+
+volumes:
+  fixcli-logs:
+    name: fixcli-logs

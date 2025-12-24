@@ -1,20 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Diagnostic: print container user and /logs ownership to job artifacts
-echo "DEBUG: verifier starting; id=$(id)"
-ls -ld /logs || true
-command -v getfacl >/dev/null 2>&1 && getfacl -p /logs 2>/dev/null || true
+# Ensure verifier directories exist
+mkdir -p /logs/verifier
 
-# Ensure verifier directories exist; if /logs is a host-mounted directory this may fail
-mkdir -p /logs/verifier || true
-
-# Try to make /logs writable for the verifier (best-effort; may fail on some mounts)
-chown -R 1001:1001 /logs 2>/dev/null || true
-chmod -R 0777 /logs 2>/dev/null || true
-
-# Ensure uv/uvx is available (pinned for reproducibility).
-python -m pip install --no-cache-dir uv==0.9.5 >/logs/verifier/pip-uv-install.txt 2>&1
+# Install uv (log installer output to /logs/verifier)
+python -m pip install --no-cache-dir uv==0.9.5 >/logs/verifier/pip-uv-install.txt 2>&1 || true
 
 # Add uv to PATH (pip installs to ~/.local/bin)
 export PATH="$HOME/.local/bin:$PATH"
