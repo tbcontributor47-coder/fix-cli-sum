@@ -171,7 +171,34 @@ PY
       }
     }
 
-    stage('Checks') {
+      stage('Oracle Compose Debug') {
+        steps {
+          sh '''#!/usr/bin/env bash
+  set -euo pipefail
+
+  echo "Starting compose debug environment..."
+  cd "$WORKSPACE"
+  docker compose -f environment/docker-compose-debug.yml --project-directory . up --build -d
+  sleep 2
+
+  CONTAINER_NAME="environment-main-1"
+  echo "Running verifier inside compose container ($CONTAINER_NAME)"
+  docker exec "$CONTAINER_NAME" sh -c "/work/tests/test.sh" || true
+
+  echo "Copying reward from named volume 'fixcli-logs' into workspace (if present)"
+  docker run --rm -v fixcli-logs:/logs -v "$WORKSPACE:/out" busybox \
+    sh -c 'cp /logs/verifier/reward.txt /out/ 2>/dev/null || true; ls -l /logs/verifier || true'
+
+  echo "Compose logs:"
+  docker compose -f environment/docker-compose-debug.yml --project-directory . logs --no-color --tail=200 || true
+
+  docker compose -f environment/docker-compose-debug.yml --project-directory . down || true
+  echo "Compose debug finished"
+  '''
+        }
+      }
+
+      stage('Checks') {
       steps {
         sh '''#!/usr/bin/env bash
 set -euo pipefail
