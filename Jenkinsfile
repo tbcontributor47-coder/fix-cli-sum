@@ -19,46 +19,7 @@ pipeline {
   }
 
   stages {
-    /*
-    stage('Prepare Workspace Permissions') {
-      steps {
-        // The ACL stage was intentionally commented out for testing without host-side ACLs.
-        // If you want Jenkins to modify workspace ACLs, uncomment this block.
-        sh '''#!/usr/bin/env bash
-set -euo pipefail
-
-echo "Host user: $(id -un) uid=$(id -u) gid=$(id -g)"
-echo "Workspace: $WORKSPACE"
-
-# Harbor verifier runs as UID 1001 in the container. On Jenkins, the workspace is owned by azureuser.
-# Use POSIX ACLs so BOTH can write (including newly created trial directories).
-if ! command -v setfacl >/dev/null 2>&1; then
-  if command -v sudo >/dev/null 2>&1; then
-    sudo apt-get update -qq
-    sudo apt-get install -y acl
-  fi
-fi
-
-if ! command -v setfacl >/dev/null 2>&1; then
-  echo "ERROR: setfacl not available; cannot grant UID 1001 access to workspace."
-  echo "Install the 'acl' package on the Jenkins agent, or run this job on an agent where it's available."
-  exit 1
-fi
-
-# Grant UID 1001 rwx on existing files/dirs, and set default ACL so future files/dirs inherit it.
-if command -v sudo >/dev/null 2>&1; then
-  sudo setfacl -R -m u:1001:rwx "$WORKSPACE"
-  sudo setfacl -R -d -m u:1001:rwx "$WORKSPACE"
-  getfacl -p "$WORKSPACE" 2>/dev/null | head -n 60 || true
-else
-  setfacl -R -m u:1001:rwx "$WORKSPACE"
-  setfacl -R -d -m u:1001:rwx "$WORKSPACE"
-  getfacl -p "$WORKSPACE" 2>/dev/null | head -n 60 || true
-fi
-'''
-      }
-    }
-    */
+    // `Prepare Workspace Permissions` stage removed — no ACL changes performed by Jenkins
 
     stage('Preflight') {
       steps {
