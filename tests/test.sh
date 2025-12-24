@@ -6,6 +6,9 @@ mkdir -p /logs/verifier
 # Ensure uv/uvx is available (pinned for reproducibility).
 python -m pip install --no-cache-dir uv==0.9.5 >/logs/verifier/pip-uv-install.txt 2>&1
 
+# Add uv to PATH (pip installs to ~/.local/bin)
+export PATH="$HOME/.local/bin:$PATH"
+
 # Run pytest and always produce a reward file.
 uvx \
   -p 3.13 \
