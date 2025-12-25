@@ -99,11 +99,14 @@ if command -v getfacl >/dev/null 2>&1; then
   echo "--- getfacl (workspace) ---" | tee -a logs/permissions.log
   getfacl -p "$WORKSPACE" | tee logs/workspace.acl.txt | tee -a logs/permissions.log || true
 
-  # Heuristic: ACLs beyond the basic owner/group/other often show as extra 'user:'/'group:' entries or a 'mask:'.
-  if grep -Eq '^(user:|group:|mask:)' logs/workspace.acl.txt; then
-    echo "NOTE: workspace has ACL entries (see logs/workspace.acl.txt)" | tee -a logs/permissions.log
+  # Heuristic: extended ACLs show as named entries (user:<name>/group:<name>), a mask:, or default: entries.
+  # Basic permissions always include user::, group::, other:: and should NOT be flagged.
+  if ls -ld "$WORKSPACE" 2>/dev/null | awk '{print $1}' | grep -q '\+'; then
+    echo "NOTE: ls indicates ACLs (trailing '+')" | tee -a logs/permissions.log
+  elif grep -Eq '^(default:|mask:|user:[^:]+:|group:[^:]+:)' logs/workspace.acl.txt; then
+    echo "NOTE: workspace has extended ACL entries (see logs/workspace.acl.txt)" | tee -a logs/permissions.log
   else
-    echo "NOTE: no ACL entries detected in getfacl output" | tee -a logs/permissions.log
+    echo "NOTE: no extended ACL entries detected" | tee -a logs/permissions.log
   fi
 else
   echo "NOTE: getfacl not installed; cannot print ACLs" | tee -a logs/permissions.log
