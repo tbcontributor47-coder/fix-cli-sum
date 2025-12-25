@@ -101,7 +101,7 @@ if command -v getfacl >/dev/null 2>&1; then
 
   # Heuristic: extended ACLs show as named entries (user:<name>/group:<name>), a mask:, or default: entries.
   # Basic permissions always include user::, group::, other:: and should NOT be flagged.
-  if ls -ld "$WORKSPACE" 2>/dev/null | awk '{print $1}' | grep -q '\+'; then
+  if ls -ld "$WORKSPACE" 2>/dev/null | awk '{print $1}' | grep -Fq '+'; then
     echo "NOTE: ls indicates ACLs (trailing '+')" | tee -a logs/permissions.log
   elif grep -Eq '^(default:|mask:|user:[^:]+:|group:[^:]+:)' logs/workspace.acl.txt; then
     echo "NOTE: workspace has extended ACL entries (see logs/workspace.acl.txt)" | tee -a logs/permissions.log
