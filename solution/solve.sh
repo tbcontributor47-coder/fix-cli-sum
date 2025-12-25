@@ -52,5 +52,9 @@ if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 PYTHON
 
-# Sanity check
-python /app/sum_cli.py /app/input.txt
+# Sanity check with a test file
+echo "1" > /tmp/test_input.txt
+echo "2" >> /tmp/test_input.txt
+echo "3" >> /tmp/test_input.txt
+
+python /app/sum_cli.py /tmp/test_input.txt

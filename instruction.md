@@ -59,11 +59,11 @@ Fix `/app/sum_cli.py` so that it meets the requirements below.
 5. Exit code:
 
    - `0` on success
-   - Non-zero on error (e.g., file not found)
+   - Non-zero (e.g., `1`) on error such as file not found
 
 6. Error handling:
 
-   - The program must handle missing files gracefully (no crash)
+   - The program must handle missing files **gracefully**: catch the FileNotFoundError, print an error message to stderr, and exit with a non-zero code (don't let it crash with an unhandled exception)
    - Non-integer lines should be ignored (skip them, don't crash)
 
 ## Constraints

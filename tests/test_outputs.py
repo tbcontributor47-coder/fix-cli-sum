@@ -86,9 +86,12 @@ def test_zero_sum() -> None:
 
 # Level 4: Error handling
 def test_missing_file_non_zero_exit() -> None:
-    """Missing input path should return a non-zero exit code."""
+    """Missing input path should return a non-zero exit code and handle gracefully (no crash)."""
     code, out, err = run_sum_cli_on_missing_file()
     assert code != 0, "Should return non-zero exit code for missing file"
+    # Verify graceful handling: must have some error message (not just a Python traceback crash)
+    # A crash would typically show "Traceback" in stderr
+    assert "Traceback" not in err, "Should handle missing file gracefully without crashing (no unhandled exception)"
 
 
 def test_ignores_non_integer_lines() -> None:
