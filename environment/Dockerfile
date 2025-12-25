@@ -6,7 +6,7 @@ WORKDIR /app
 COPY app/ /app/
 
 # Run as non-root to avoid privileged assumptions.
-RUN useradd -m -u 1001 ciuser \
+RUN useradd -m -u 1000 ciuser \
   && chown -R ciuser:ciuser /app \
   # Create expected log directories at build time (image-level).
   && mkdir -p /logs/agent /logs/verifier \
