@@ -13,6 +13,7 @@ pipeline {
     booleanParam(name: 'RUN_NOP', defaultValue: false, description: 'Run Harbor nop agent (optional)')
     booleanParam(name: 'RUN_CODEX', defaultValue: false, description: 'Run GPT-5 agent run (CodeBuild "codex" equivalent)')
     booleanParam(name: 'RUN_CLAUDE', defaultValue: false, description: 'Run Claude Sonnet 4.5 agent run (optional)')
+    booleanParam(name: 'RUN_DIFFICULTY_5X', defaultValue: true, description: 'Run 5× GPT-5 + 5× Claude and print pass rates (optional)')
     booleanParam(name: 'RUN_CONSOLIDATE', defaultValue: false, description: 'Print a consolidated jobs/logs summary (optional)')
   }
 
@@ -441,6 +442,120 @@ print(f"Harbor reported errors: {err}")
 sys.exit(1 if err > 0 else 0)
 PY
 fi
+'''
+      }
+    }
+
+    stage('Difficulty Check (5x each, optional)') {
+      when {
+        expression { return env.OPENAI_API_KEY?.trim() && params.RUN_DIFFICULTY_5X }
+      }
+      steps {
+        sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+mkdir -p logs
+
+export PATH="$HOME/.local/bin:$PATH"
+if [ -f "$HOME/.local/bin/env" ]; then
+  source "$HOME/.local/bin/env"
+fi
+
+command -v harbor >/dev/null || { echo "harbor not found in PATH (did Preflight run?)"; exit 127; }
+
+TASK_ABS="$(cd "$WORKSPACE/$TASK_PATH" 2>/dev/null && pwd -P)"
+echo "Task absolute path: $TASK_ABS"
+
+echo "===== Difficulty Check (5x each) =====" | tee logs/difficulty-5x.log
+
+MODEL_GPT5="openai/@openai-tbench/gpt-5"
+MODEL_CLAUDE="openai/@anthropic-tbench/claude-sonnet-4-5-20250929"
+
+run_many() {
+  local label="$1"
+  local model="$2"
+  local n="$3"
+  local pass=0
+
+  echo "" | tee -a logs/difficulty-5x.log
+  echo "--- $label ($model): ${n} runs ---" | tee -a logs/difficulty-5x.log
+
+  for i in $(seq 1 "$n"); do
+    echo "Run ${i}/${n}: $label" | tee -a logs/difficulty-5x.log
+    harbor run -a terminus-2 -m "$model" -p "$TASK_ABS" 2>&1 | tee "logs/difficulty-${label}-${i}.log"
+
+    RESULT_JSON="$(awk '/Results written to /{print $NF}' "logs/difficulty-${label}-${i}.log" | tail -n1)"
+    if [ -z "$RESULT_JSON" ]; then
+      echo "ERROR: Could not find result.json path in logs/difficulty-${label}-${i}.log" | tee -a logs/difficulty-5x.log
+      continue
+    fi
+    if [ ! -f "$RESULT_JSON" ] && [ -f "$WORKSPACE/$RESULT_JSON" ]; then
+      RESULT_JSON="$WORKSPACE/$RESULT_JSON"
+    fi
+    if [ ! -f "$RESULT_JSON" ]; then
+      echo "ERROR: Harbor result file not found: $RESULT_JSON" | tee -a logs/difficulty-5x.log
+      continue
+    fi
+
+    # Extract the eval mean (single-trial reward) from result.json.
+    MEAN="$((python3 - "$RESULT_JSON" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+with open(path, 'r', encoding='utf-8') as f:
+    data = json.load(f)
+
+stats = data.get('stats', {})
+evals = stats.get('evals', {}) if isinstance(stats, dict) else {}
+if isinstance(evals, dict) and evals:
+    first_eval = next(iter(evals.values()))
+    if isinstance(first_eval, dict):
+        metrics = first_eval.get('metrics')
+        if isinstance(metrics, list) and metrics and isinstance(metrics[0], dict) and 'mean' in metrics[0]:
+            print(metrics[0]['mean'])
+            raise SystemExit(0)
+
+# Fallback: scan for numeric 'mean' fields.
+def scan_means(node):
+    if isinstance(node, dict):
+        for k, v in node.items():
+            if k == 'mean' and isinstance(v, (int, float)):
+                yield v
+            yield from scan_means(v)
+    elif isinstance(node, list):
+        for x in node:
+            yield from scan_means(x)
+
+means = list(scan_means(data))
+if means:
+    print(means[0])
+else:
+    print('')
+PY
+) 2>/dev/null)"
+
+    if [ "$MEAN" = "1" ] || [ "$MEAN" = "1.0" ]; then
+      pass=$((pass + 1))
+      echo "  result: PASS (mean=$MEAN)" | tee -a logs/difficulty-5x.log
+    else
+      echo "  result: FAIL (mean=${MEAN:-?})" | tee -a logs/difficulty-5x.log
+    fi
+  done
+
+  echo "$pass"  # stdout-only return value
+}
+
+PASS_GPT5="$(run_many gpt5 "$MODEL_GPT5" 5 | tail -n1)"
+PASS_CLAUDE="$(run_many claude "$MODEL_CLAUDE" 5 | tail -n1)"
+
+echo "" | tee -a logs/difficulty-5x.log
+echo "===== Summary =====" | tee -a logs/difficulty-5x.log
+echo "GPT-5:   ${PASS_GPT5}/5 pass" | tee -a logs/difficulty-5x.log
+echo "Claude:  ${PASS_CLAUDE}/5 pass" | tee -a logs/difficulty-5x.log
+
+# Do not fail the build here; this stage is informational.
+exit 0
 '''
       }
     }

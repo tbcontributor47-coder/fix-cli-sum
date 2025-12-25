@@ -5,94 +5,139 @@
             "version": "8.4.1"
         },
         "summary": {
-            "tests": 9,
-            "passed": 9,
+            "tests": 14,
+            "passed": 14,
             "failed": 0,
             "skipped": 0,
             "pending": 0,
             "other": 0,
-            "start": 1766676988.4057596,
-            "stop": 1766676989.001894
+            "start": 1766677690.2310529,
+            "stop": 1766677691.3725746
         },
         "tests": [
             {
                 "name": "tests/test_outputs.py::test_basic_numbers_and_comments",
                 "status": "passed",
-                "duration": 0.062671830999534,
-                "start": 1766676988.5072901,
-                "stop": 1766676988.5704308,
+                "duration": 0.06687490100193827,
+                "start": 1766677690.420341,
+                "stop": 1766677690.4877498,
                 "retries": 0,
                 "file_path": "tests/test_outputs.py"
             },
             {
                 "name": "tests/test_outputs.py::test_strict_mode_rejects_invalid_data_line",
                 "status": "passed",
-                "duration": 0.05005863799669896,
-                "start": 1766676988.5722473,
-                "stop": 1766676988.6226723,
+                "duration": 0.05052978800267738,
+                "start": 1766677690.4894977,
+                "stop": 1766677690.5404215,
                 "retries": 0,
                 "file_path": "tests/test_outputs.py"
             },
             {
                 "name": "tests/test_outputs.py::test_utf8_bom_is_accepted",
                 "status": "passed",
-                "duration": 0.05249117800121894,
-                "start": 1766676988.6244268,
-                "stop": 1766676988.6772425,
+                "duration": 0.05048436300421599,
+                "start": 1766677690.5423338,
+                "stop": 1766677690.5931907,
                 "retries": 0,
                 "file_path": "tests/test_outputs.py"
             },
             {
                 "name": "tests/test_outputs.py::test_separators_and_plus_sign",
                 "status": "passed",
-                "duration": 0.051199293999161455,
-                "start": 1766676988.6791599,
-                "stop": 1766676988.7306638,
+                "duration": 0.054881927999304025,
+                "start": 1766677690.595483,
+                "stop": 1766677690.6507032,
                 "retries": 0,
                 "file_path": "tests/test_outputs.py"
             },
             {
                 "name": "tests/test_outputs.py::test_base_directive_switching",
                 "status": "passed",
-                "duration": 0.05254744100056996,
-                "start": 1766676988.732499,
-                "stop": 1766676988.7853484,
+                "duration": 0.050869445001808344,
+                "start": 1766677690.6527524,
+                "stop": 1766677690.7040968,
+                "retries": 0,
+                "file_path": "tests/test_outputs.py"
+            },
+            {
+                "name": "tests/test_outputs.py::test_cli_base_overrides_default_parsing_base",
+                "status": "passed",
+                "duration": 0.054266229997665505,
+                "start": 1766677690.7061117,
+                "stop": 1766677690.7607071,
+                "retries": 0,
+                "file_path": "tests/test_outputs.py"
+            },
+            {
+                "name": "tests/test_outputs.py::test_cli_base_validation_requires_2_to_36",
+                "status": "passed",
+                "duration": 0.1043790160001663,
+                "start": 1766677690.7624094,
+                "stop": 1766677690.867167,
                 "retries": 0,
                 "file_path": "tests/test_outputs.py"
             },
             {
                 "name": "tests/test_outputs.py::test_range_directive_large_and_reversed",
                 "status": "passed",
-                "duration": 0.05034722600066743,
-                "start": 1766676988.7871647,
-                "stop": 1766676988.8378177,
+                "duration": 0.05810841300080938,
+                "start": 1766677690.8692136,
+                "stop": 1766677690.927742,
+                "retries": 0,
+                "file_path": "tests/test_outputs.py"
+            },
+            {
+                "name": "tests/test_outputs.py::test_directives_malformed_or_unknown_are_errors",
+                "status": "passed",
+                "duration": 0.16065066599912825,
+                "start": 1766677690.930076,
+                "stop": 1766677691.09114,
                 "retries": 0,
                 "file_path": "tests/test_outputs.py"
             },
             {
                 "name": "tests/test_outputs.py::test_include_relative_to_including_file",
                 "status": "passed",
-                "duration": 0.05240611399858608,
-                "start": 1766676988.839698,
-                "stop": 1766676988.8924818,
+                "duration": 0.056981970999913756,
+                "start": 1766677691.0930831,
+                "stop": 1766677691.1504846,
                 "retries": 0,
                 "file_path": "tests/test_outputs.py"
             },
             {
                 "name": "tests/test_outputs.py::test_missing_input_file_is_graceful",
                 "status": "passed",
-                "duration": 0.051144256998668425,
-                "start": 1766676988.8944266,
-                "stop": 1766676988.9459069,
+                "duration": 0.05233241099995212,
+                "start": 1766677691.152506,
+                "stop": 1766677691.205163,
+                "retries": 0,
+                "file_path": "tests/test_outputs.py"
+            },
+            {
+                "name": "tests/test_outputs.py::test_missing_include_file_is_graceful",
+                "status": "passed",
+                "duration": 0.05649296800038428,
+                "start": 1766677691.2072012,
+                "stop": 1766677691.2641041,
                 "retries": 0,
                 "file_path": "tests/test_outputs.py"
             },
             {
                 "name": "tests/test_outputs.py::test_include_cycle_is_detected",
                 "status": "passed",
-                "duration": 0.05289623099997698,
-                "start": 1766676988.9482312,
-                "stop": 1766676989.0014572,
+                "duration": 0.05306724799811491,
+                "start": 1766677691.265914,
+                "stop": 1766677691.31942,
+                "retries": 0,
+                "file_path": "tests/test_outputs.py"
+            },
+            {
+                "name": "tests/test_outputs.py::test_usage_error_missing_positional_input_file",
+                "status": "passed",
+                "duration": 0.05073891000029107,
+                "start": 1766677691.321158,
+                "stop": 1766677691.3721945,
                 "retries": 0,
                 "file_path": "tests/test_outputs.py"
             }

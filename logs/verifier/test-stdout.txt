@@ -133,3 +133,32 @@ PASSED ../tests/test_outputs.py::test_include_cycle_is_detected
 ============================== 9 passed in 0.60s ===============================
 PYTEST_EXIT=0
 Wrote reward=1
+Python: 3.13.11 (main, Dec  8 2025, 23:38:56) [GCC 12.2.0]
+pip 25.3 from /usr/local/lib/python3.13/site-packages/pip (python 3.13)
+============================= test session starts ==============================
+platform linux -- Python 3.13.11, pytest-8.4.1, pluggy-1.6.0
+rootdir: /
+plugins: json-ctrf-0.3.5
+collected 14 items
+
+../tests/test_outputs.py ..............                                  [100%]
+
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED ../tests/test_outputs.py::test_basic_numbers_and_comments
+PASSED ../tests/test_outputs.py::test_strict_mode_rejects_invalid_data_line
+PASSED ../tests/test_outputs.py::test_utf8_bom_is_accepted
+PASSED ../tests/test_outputs.py::test_separators_and_plus_sign
+PASSED ../tests/test_outputs.py::test_base_directive_switching
+PASSED ../tests/test_outputs.py::test_cli_base_overrides_default_parsing_base
+PASSED ../tests/test_outputs.py::test_cli_base_validation_requires_2_to_36
+PASSED ../tests/test_outputs.py::test_range_directive_large_and_reversed
+PASSED ../tests/test_outputs.py::test_directives_malformed_or_unknown_are_errors
+PASSED ../tests/test_outputs.py::test_include_relative_to_including_file
+PASSED ../tests/test_outputs.py::test_missing_input_file_is_graceful
+PASSED ../tests/test_outputs.py::test_missing_include_file_is_graceful
+PASSED ../tests/test_outputs.py::test_include_cycle_is_detected
+PASSED ../tests/test_outputs.py::test_usage_error_missing_positional_input_file
+============================== 14 passed in 1.15s ==============================
+PYTEST_EXIT=0
+Wrote reward=1
