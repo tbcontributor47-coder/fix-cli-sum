@@ -44,7 +44,7 @@ Data lines contribute either 0 (ignored) or a parsed integer value.
   - Example (invalid token): `123#hello` (no whitespace before `#`)
 - The numeric token supports:
   - Optional leading `+` or `-`
-  - Base-dependent digits (0-9, A-Z, case-insensitive)
+   - Base-dependent digits (ASCII `0-9`, `A-Z`, case-insensitive). Non-ASCII numerals (e.g., `١`) are invalid.
   - Optional visual separators `_` and `,` anywhere in the token (they are ignored)
 
 If a data line cannot be parsed into an integer:

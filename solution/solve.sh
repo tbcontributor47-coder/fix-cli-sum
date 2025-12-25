@@ -58,7 +58,20 @@ def _parse_int_token(token: str, base: int) -> int:
     t = _strip_separators(token.strip())
     if not t:
         raise ValueError("empty integer token")
-    return int(t, base)
+    sign = ""
+    body = t
+    if body[0] in "+-":
+        sign = body[0]
+        body = body[1:]
+
+    if not body:
+        raise ValueError("empty integer token")
+
+    # Spec restricts digits to ASCII 0-9 and A-Z (case-insensitive).
+    if not body.isascii() or not body.isalnum():
+        raise ValueError("non-ascii or non-alphanumeric digit")
+
+    return int(sign + body, base)
 
 
 def _sum_inclusive_range(a: int, b: int) -> int:

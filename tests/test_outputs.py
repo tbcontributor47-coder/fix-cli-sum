@@ -211,13 +211,48 @@ def test_boundary_bases_2_and_36() -> None:
     assert out == "SUM=36\n"
 
 
-def test_unicode_digits_are_rejected() -> None:
-    # Use an Arabic-Indic digit; should be treated as invalid and produce a usage error.
+def test_unicode_digits_are_invalid_in_non_strict_mode() -> None:
+    # Spec restricts digits to ASCII 0-9 and A-Z. Non-ASCII numerals are invalid tokens.
+    # In non-strict mode, invalid data lines are ignored.
     p = write_text(Path("/tmp/unicode_digits.txt"), "١\n")  # U+0661
     code, out, err = run_sum_cli(p)
-    # Oracle accepts Unicode numeric digits (Python int handles them), so expect success.
     assert code == 0, err
-    assert out == "SUM=1\n"
+    assert out == "SUM=0\n"
+
+
+def test_unicode_digits_are_errors_in_strict_mode() -> None:
+    p = write_text(Path("/tmp/unicode_digits_strict.txt"), "١\n")  # U+0661
+    code, out, err = run_sum_cli(p, strict=True)
+    assert code == 2
+    assert out == ""
+    assert err.strip() != ""
+    assert "Traceback" not in err
+
+
+def test_range_endpoints_use_current_base() -> None:
+    # Ensure @range endpoints are parsed using the current base (not always base-10).
+    # In base 16: a..f == 10..15, sum = 75.
+    p = write_text(Path("/tmp/range_base16.txt"), "@base 16\n@range a..f\n")
+    code, out, err = run_sum_cli(p)
+    assert code == 0, err
+    assert out == "SUM=75\n"
+
+
+def test_include_malformed_arguments_are_errors() -> None:
+    # Malformed directives are errors.
+    p = write_text(Path("/tmp/include_no_arg.txt"), "@include\n")
+    code, out, err = run_sum_cli(p)
+    assert code == 2
+    assert out == ""
+    assert err.strip() != ""
+    assert "Traceback" not in err
+
+    p = write_text(Path("/tmp/include_empty_arg.txt"), "@include    \n")
+    code, out, err = run_sum_cli(p)
+    assert code == 2
+    assert out == ""
+    assert err.strip() != ""
+    assert "Traceback" not in err
 
 
 def test_combined_tricky_case_includes_and_mixed() -> None:
