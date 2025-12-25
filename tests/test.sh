@@ -1,13 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Ensure verifier directories exist
-mkdir -p /logs/verifier
+if [ "$PWD" = "/" ]; then
+  echo "Error: No working directory set. Please set a WORKDIR in your Dockerfile before running this script."
+  exit 1
+fi
 
-# Install uv (log installer output to /logs/verifier)
-python -m pip install --no-cache-dir uv==0.9.5 >/logs/verifier/pip-uv-install.txt 2>&1 || true
+# Best-effort: create verifier log directory (may be a bind mount).
+mkdir -p /logs/verifier 2>/dev/null || true
 
-# Add uv to PATH (pip installs to ~/.local/bin)
+# Best-effort: relax permissions in case the host created /logs with restrictive modes.
+chmod -R a+rwx /logs 2>/dev/null || true
+
+# Remove any pre-existing reward file so the final reward is derived only from test outcomes.
+rm -f /logs/verifier/reward.txt 2>/dev/null || true
+
+# Ensure HOME is set for uv installer.
+: "${HOME:=/tmp}"
+export HOME
+
+# Install uv/uvx at test time (pinned) if not present in the runtime image.
+if ! command -v uvx >/dev/null 2>&1; then
+  python3 - <<'PY'
+import urllib.request
+
+url = "https://astral.sh/uv/0.9.5/install.sh"
+dest = "/tmp/uv-install.sh"
+urllib.request.urlretrieve(url, dest)
+print(dest)
+PY
+  sh /tmp/uv-install.sh >/tmp/uv-install.log 2>&1 || true
+fi
+
 export PATH="$HOME/.local/bin:$PATH"
 
 # Run pytest and capture exit code
