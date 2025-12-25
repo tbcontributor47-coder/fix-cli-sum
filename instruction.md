@@ -17,7 +17,13 @@ Fix `/app/sum_cli.py` so that it meets the requirements below.
 1. The CLI must be invoked as:
 
    ```
-   python /app/sum_cli.py /app/input.txt
+   python /app/sum_cli.py <input_file_path>
+   ```
+
+   Example:
+
+   ```
+   python /app/sum_cli.py /tmp/input.txt
    ```
 
 2. The input file path is the **first positional argument**.
