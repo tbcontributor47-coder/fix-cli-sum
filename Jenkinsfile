@@ -8,6 +8,14 @@ pipeline {
     disableConcurrentBuilds()
   }
 
+  parameters {
+    booleanParam(name: 'RUN_ALL_MODES', defaultValue: true, description: 'Run oracle + nop + GPT-5 + Claude + consolidate (optional)')
+    booleanParam(name: 'RUN_NOP', defaultValue: false, description: 'Run Harbor nop agent (optional)')
+    booleanParam(name: 'RUN_CODEX', defaultValue: false, description: 'Run GPT-5 agent run (CodeBuild "codex" equivalent)')
+    booleanParam(name: 'RUN_CLAUDE', defaultValue: false, description: 'Run Claude Sonnet 4.5 agent run (optional)')
+    booleanParam(name: 'RUN_CONSOLIDATE', defaultValue: false, description: 'Print a consolidated jobs/logs summary (optional)')
+  }
+
   environment {
     // This repo IS the Harbor task (root contains instruction.md, task.toml, etc)
     TASK_PATH = '.'
@@ -217,6 +225,30 @@ PY
       }
     }
 
+    stage('NOP (optional)') {
+      when {
+        expression { return params.RUN_ALL_MODES || params.RUN_NOP }
+      }
+      steps {
+        sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+mkdir -p logs
+
+export PATH="$HOME/.local/bin:$PATH"
+if [ -f "$HOME/.local/bin/env" ]; then
+  source "$HOME/.local/bin/env"
+fi
+
+command -v harbor >/dev/null || { echo "harbor not found in PATH (did Preflight run?)"; exit 127; }
+
+TASK_ABS="$(cd "$WORKSPACE/$TASK_PATH" 2>/dev/null && pwd -P)"
+echo "Task absolute path: $TASK_ABS"
+harbor run --agent nop --path "$TASK_ABS" --force-build 2>&1 | tee logs/nop.log
+'''
+      }
+    }
+
       stage('Checks') {
       steps {
         sh '''#!/usr/bin/env bash
@@ -240,7 +272,7 @@ harbor tasks check "$TASK_ABS" --model openai/@openai-tbench/gpt-5 2>&1 | tee lo
 
     stage('Agent Runs (optional)') {
       when {
-        expression { return env.OPENAI_API_KEY?.trim() }
+        expression { return env.OPENAI_API_KEY?.trim() && (params.RUN_ALL_MODES || params.RUN_CODEX || params.RUN_CLAUDE) }
       }
       steps {
         sh '''#!/usr/bin/env bash
@@ -258,48 +290,49 @@ command -v harbor >/dev/null || { echo "harbor not found in PATH (did Preflight 
 TASK_ABS="$(cd "$WORKSPACE/$TASK_PATH" 2>/dev/null && pwd -P)"
 echo "Task absolute path: $TASK_ABS"
 
-echo "Running GPT-5 agent..."
-harbor run -a terminus-2 -m openai/@openai-tbench/gpt-5 -p "$TASK_ABS" 2>&1 | tee logs/agent-gpt5.log
+if [ "${RUN_ALL_MODES:-false}" = "true" ] || [ "${RUN_CODEX:-false}" = "true" ]; then
+  echo "Running GPT-5 agent..."
+  harbor run -a terminus-2 -m openai/@openai-tbench/gpt-5 -p "$TASK_ABS" 2>&1 | tee logs/agent-gpt5.log
 
-RESULT_JSON="$(awk '/Results written to /{print $NF}' logs/agent-gpt5.log | tail -n1)"
-if [ -z "$RESULT_JSON" ]; then
-  echo "ERROR: Could not find result.json path in logs/agent-gpt5.log"
-  exit 1
-fi
-if [ ! -f "$RESULT_JSON" ] && [ -f "$WORKSPACE/$RESULT_JSON" ]; then
-  RESULT_JSON="$WORKSPACE/$RESULT_JSON"
-fi
-if [ ! -f "$RESULT_JSON" ]; then
-  echo "ERROR: Harbor result file not found: $RESULT_JSON"
-  exit 1
-fi
+  RESULT_JSON="$(awk '/Results written to /{print $NF}' logs/agent-gpt5.log | tail -n1)"
+  if [ -z "$RESULT_JSON" ]; then
+    echo "ERROR: Could not find result.json path in logs/agent-gpt5.log"
+    exit 1
+  fi
+  if [ ! -f "$RESULT_JSON" ] && [ -f "$WORKSPACE/$RESULT_JSON" ]; then
+    RESULT_JSON="$WORKSPACE/$RESULT_JSON"
+  fi
+  if [ ! -f "$RESULT_JSON" ]; then
+    echo "ERROR: Harbor result file not found: $RESULT_JSON"
+    exit 1
+  fi
 
-echo ""
-echo "========== Harbor Agent (GPT-5) result.json =========="
-cat "$RESULT_JSON" || true
-echo "========== Harbor Agent (GPT-5) job dir listing =========="
-ls -la "$(dirname "$RESULT_JSON")" || true
-echo "========== Harbor Agent (GPT-5) job.log =========="
-cat "$(dirname "$RESULT_JSON")/job.log" || true
-echo "========== Harbor Agent (GPT-5) trial directory =========="
-TRIAL_DIR="$(find "$(dirname "$RESULT_JSON")" -mindepth 1 -maxdepth 1 -type d | head -n1)"
-if [ -n "$TRIAL_DIR" ]; then
-  echo "Trial dir: $TRIAL_DIR"
-  ls -laR "$TRIAL_DIR" || true
-  echo "--- Trial stdout ---"
-  cat "$TRIAL_DIR/stdout" 2>/dev/null || echo "(no stdout)"
-  echo "--- Trial stderr ---"
-  cat "$TRIAL_DIR/stderr" 2>/dev/null || echo "(no stderr)"
-fi
-echo "========================================================"
+  echo ""
+  echo "========== Harbor Agent (GPT-5) result.json =========="
+  cat "$RESULT_JSON" || true
+  echo "========== Harbor Agent (GPT-5) job dir listing =========="
+  ls -la "$(dirname "$RESULT_JSON")" || true
+  echo "========== Harbor Agent (GPT-5) job.log =========="
+  cat "$(dirname "$RESULT_JSON")/job.log" || true
+  echo "========== Harbor Agent (GPT-5) trial directory =========="
+  TRIAL_DIR="$(find "$(dirname "$RESULT_JSON")" -mindepth 1 -maxdepth 1 -type d | head -n1)"
+  if [ -n "$TRIAL_DIR" ]; then
+    echo "Trial dir: $TRIAL_DIR"
+    ls -laR "$TRIAL_DIR" || true
+    echo "--- Trial stdout ---"
+    cat "$TRIAL_DIR/stdout" 2>/dev/null || echo "(no stdout)"
+    echo "--- Trial stderr ---"
+    cat "$TRIAL_DIR/stderr" 2>/dev/null || echo "(no stderr)"
+  fi
+  echo "========================================================"
 
-PYTHON_BIN="$(command -v python3 || command -v python || true)"
-if [ -z "$PYTHON_BIN" ]; then
-  echo "ERROR: python/python3 not found; cannot validate Harbor result.json"
-  exit 1
-fi
+  PYTHON_BIN="$(command -v python3 || command -v python || true)"
+  if [ -z "$PYTHON_BIN" ]; then
+    echo "ERROR: python/python3 not found; cannot validate Harbor result.json"
+    exit 1
+  fi
 
-"$PYTHON_BIN" - "$RESULT_JSON" <<'PY'
+  "$PYTHON_BIN" - "$RESULT_JSON" <<'PY'
 import json
 import sys
 
@@ -331,9 +364,11 @@ err = max_errors(data)
 print(f"Harbor reported errors: {err}")
 sys.exit(1 if err > 0 else 0)
 PY
+fi
 
-echo "Running Claude Sonnet 4.5 agent..."
-harbor run -a terminus-2 -m openai/@anthropic-tbench/claude-sonnet-4-5-20250929 -p "$TASK_ABS" 2>&1 | tee logs/agent-claude.log
+if [ "${RUN_ALL_MODES:-false}" = "true" ] || [ "${RUN_CLAUDE:-false}" = "true" ]; then
+  echo "Running Claude Sonnet 4.5 agent..."
+  harbor run -a terminus-2 -m openai/@anthropic-tbench/claude-sonnet-4-5-20250929 -p "$TASK_ABS" 2>&1 | tee logs/agent-claude.log
 
 RESULT_JSON="$(awk '/Results written to /{print $NF}' logs/agent-claude.log | tail -n1)"
 if [ -z "$RESULT_JSON" ]; then
@@ -405,6 +440,47 @@ err = max_errors(data)
 print(f"Harbor reported errors: {err}")
 sys.exit(1 if err > 0 else 0)
 PY
+fi
+'''
+      }
+    }
+
+    stage('Consolidate (optional)') {
+      when {
+        expression { return params.RUN_ALL_MODES || params.RUN_CONSOLIDATE }
+      }
+      steps {
+        sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+mkdir -p logs
+
+echo "===== Consolidated summary =====" | tee logs/consolidate.log
+echo "Node: $(hostname)" | tee -a logs/consolidate.log
+echo "Workspace: $WORKSPACE" | tee -a logs/consolidate.log
+echo "Task path: $TASK_PATH" | tee -a logs/consolidate.log
+
+if [ -d jobs ]; then
+  echo "" | tee -a logs/consolidate.log
+  echo "--- jobs/ tree (top 200 lines) ---" | tee -a logs/consolidate.log
+  (find jobs -maxdepth 6 -print | sed 's#^#jobs:#' | head -n 200) | tee -a logs/consolidate.log
+
+  echo "" | tee -a logs/consolidate.log
+  echo "--- result.json files (up to 50) ---" | tee -a logs/consolidate.log
+  (find jobs -name result.json -type f | sort | tail -n 50) | tee -a logs/consolidate.log
+
+  echo "" | tee -a logs/consolidate.log
+  echo "--- last job.log (if any) ---" | tee -a logs/consolidate.log
+  LAST_JOB_LOG="$(find jobs -name job.log -type f | sort | tail -n 1)"
+  if [ -n "$LAST_JOB_LOG" ]; then
+    echo "Last job.log: $LAST_JOB_LOG" | tee -a logs/consolidate.log
+    tail -n 200 "$LAST_JOB_LOG" | tee -a logs/consolidate.log || true
+  else
+    echo "No job.log found under jobs/" | tee -a logs/consolidate.log
+  fi
+else
+  echo "No jobs/ directory found (nothing to consolidate)." | tee -a logs/consolidate.log
+fi
 '''
       }
     }
