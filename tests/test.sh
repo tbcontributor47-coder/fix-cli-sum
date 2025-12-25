@@ -19,9 +19,21 @@ rm -f /logs/verifier/reward.txt 2>/dev/null || true
 : "${HOME:=/tmp}"
 export HOME
 
-# Install uv/uvx at test time (pinned) if not present in the runtime image.
-if ! command -v uvx >/dev/null 2>&1; then
-  python3 - <<'PY'
+# Prefer offline execution: if pytest + ctrf plugin are available in the image,
+# run them directly. Fall back to uvx only if necessary.
+set +e
+python3 -c 'import pytest_json_ctrf' >/dev/null 2>&1
+HAS_CTRF=$?
+python3 -c 'import pytest' >/dev/null 2>&1
+HAS_PYTEST=$?
+
+if [ $HAS_PYTEST -eq 0 ] && [ $HAS_CTRF -eq 0 ]; then
+  python3 -m pytest --ctrf /logs/verifier/ctrf.json /tests/test_outputs.py -rA
+  PYTEST_EXIT=$?
+else
+  # Install uv/uvx at test time (pinned) if not present in the runtime image.
+  if ! command -v uvx >/dev/null 2>&1; then
+    python3 - <<'PY'
 import urllib.request
 
 url = "https://astral.sh/uv/0.9.5/install.sh"
@@ -29,19 +41,17 @@ dest = "/tmp/uv-install.sh"
 urllib.request.urlretrieve(url, dest)
 print(dest)
 PY
-  sh /tmp/uv-install.sh >/tmp/uv-install.log 2>&1 || true
+    sh /tmp/uv-install.sh >/tmp/uv-install.log 2>&1 || true
+  fi
+
+  export PATH="$HOME/.local/bin:$PATH"
+  uvx \
+    -p 3.13 \
+    -w pytest==8.4.1 \
+    -w pytest-json-ctrf==0.3.5 \
+    pytest --ctrf /logs/verifier/ctrf.json /tests/test_outputs.py -rA
+  PYTEST_EXIT=$?
 fi
-
-export PATH="$HOME/.local/bin:$PATH"
-
-# Run pytest and capture exit code
-set +e
-uvx \
-  -p 3.13 \
-  -w pytest==8.4.1 \
-  -w pytest-json-ctrf==0.3.5 \
-  pytest --ctrf /logs/verifier/ctrf.json /tests/test_outputs.py -rA
-PYTEST_EXIT=$?
 set -e
 
 # Always produce a reward file based on test results
