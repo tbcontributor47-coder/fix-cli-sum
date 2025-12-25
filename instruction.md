@@ -1,70 +1,98 @@
-# Fix CLI Sum Tool
+# Fix CLI Sum Tool (v2)
 
 You are given a small CLI program inside the container at:
 
 - `/app/sum_cli.py`
 
-The program is supposed to read a text file containing **one integer per line**, compute the sum, and print the result.
+The program reads a text file containing a mixture of **numbers** and **directives**, computes a total, and prints the result.
 
-Right now, the program is **buggy** and does not correctly handle all valid inputs. There are **multiple bugs** that need to be fixed.
+Right now, the program is **buggy** and does not correctly implement the required parsing and directives. Fix it.
 
 ## Your task
 
 Fix `/app/sum_cli.py` so that it meets the requirements below.
 
-## Requirements
+## CLI
 
-1. The CLI must be invoked as:
+The CLI must be invoked as:
 
-   ```
-   python /app/sum_cli.py <input_file_path>
-   ```
+```
+python /app/sum_cli.py [--base N] [--strict] <input_file_path>
+```
 
-   Example:
+- `<input_file_path>` is required.
+- `--base N` sets the default numeric base (integer $2 \le N \le 36$). Default: `10`.
+- `--strict` enables strict parsing: invalid data lines become errors (see below).
 
-   ```
-   python /app/sum_cli.py /tmp/input.txt
-   ```
+## Input format
 
-2. The input file path is the **first positional argument**.
+The input file is UTF-8 text. It may begin with a UTF-8 BOM.
 
-3. The input file contains:
+Each line (after trimming leading/trailing whitespace) is one of:
 
-   - One integer per line
-   - Lines may have leading/trailing whitespace
-   - Blank lines may appear and must be ignored
-   - Integers may be negative
-   - Empty files are valid (sum = 0)
+1. **Blank line**: ignored.
+2. **Comment line**: ignored if the trimmed line starts with `#`.
+3. **Directive line**: trimmed line starts with `@`.
+4. **Data line**: everything else.
 
-4. The program must print **exactly** one line to stdout:
+### Data lines
 
-   ```
-   SUM=<number>
-   ```
+Data lines contribute either 0 (ignored) or a parsed integer value.
 
-   Example:
+- A data line may contain an **inline comment** introduced by `#`, but only when `#` is preceded by at least one whitespace character.
+  - Example (valid): `123   # hello`
+  - Example (invalid token): `123#hello` (no whitespace before `#`)
+- The numeric token supports:
+  - Optional leading `+` or `-`
+  - Base-dependent digits (0-9, A-Z, case-insensitive)
+  - Optional visual separators `_` and `,` anywhere in the token (they are ignored)
 
-   - If the numbers are `1`, `2`, `-3`, the output must be:
+If a data line cannot be parsed into an integer:
 
-     ```
-     SUM=0
-     ```
+- **Non-strict mode (default):** ignore that line.
+- **Strict mode (`--strict`):** treat it as an error (exit non-zero).
 
-   - For an empty file, the output must be:
+### Directives
 
-     ```
-     SUM=0
-     ```
+Directives are always significant; malformed or unknown directives are errors.
 
-5. Exit code:
+Supported directives:
 
-   - `0` on success
-   - Non-zero (e.g., `1`) on error such as file not found
+1. `@base N`
+   - Sets the *current* base for subsequent number parsing.
+   - `N` must be in the range $2..36$.
 
-6. Error handling:
+2. `@range A..B`
+   - Adds the sum of **all integers from A to B inclusive**.
+   - `A` and `B` are parsed using the *current* base and the same token rules as data lines.
+   - `A` may be greater than `B` (it still sums the inclusive range).
+   - Ranges may be very large; your implementation must not iterate over every integer in the range.
 
-   - The program must handle missing files **gracefully**: catch the FileNotFoundError, print an error message to stderr, and exit with a non-zero code (don't let it crash with an unhandled exception)
-   - Non-integer lines should be ignored (skip them, don't crash)
+3. `@include PATH`
+   - Reads and processes another file, then continues processing the current file.
+   - Relative paths are resolved relative to the including file's directory.
+   - Include cycles must be detected and treated as an error.
+
+## Output
+
+On success, print **exactly one line** to stdout:
+
+```
+SUM=<number>
+```
+
+The output must end with a newline.
+
+## Exit codes / error handling
+
+- Exit `0` on success.
+- Exit `2` for usage errors or parse errors (including strict-mode data-line errors and malformed directives).
+- Exit `1` for file I/O errors (missing input file, missing include file, include cycle).
+
+On any error:
+
+- Print a human-readable error message to stderr.
+- Do not print a Python traceback.
 
 ## Constraints
 
@@ -72,11 +100,3 @@ Fix `/app/sum_cli.py` so that it meets the requirements below.
 - Do not change the container environment.
 - Only fix the logic in `/app/sum_cli.py`.
 
-## Hints
-
-The current implementation has multiple issues:
-
-- Output format problems
-- Edge case handling (empty files, whitespace)
-- Missing error handling
-- Logic bugs in number parsing
