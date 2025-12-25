@@ -463,11 +463,12 @@ echo "Task path: $TASK_PATH" | tee -a logs/consolidate.log
 if [ -d jobs ]; then
   echo "" | tee -a logs/consolidate.log
   echo "--- jobs/ tree (top 200 lines) ---" | tee -a logs/consolidate.log
-  (find jobs -maxdepth 6 -print | sed 's#^#jobs:#' | head -n 200) | tee -a logs/consolidate.log
+  # NOTE: `head` can trigger SIGPIPE in upstream commands; do not fail the build on that.
+  (find jobs -maxdepth 6 -print | sed 's#^#jobs:#' | head -n 200) | tee -a logs/consolidate.log || true
 
   echo "" | tee -a logs/consolidate.log
   echo "--- result.json files (up to 50) ---" | tee -a logs/consolidate.log
-  (find jobs -name result.json -type f | sort | tail -n 50) | tee -a logs/consolidate.log
+  (find jobs -name result.json -type f | sort | tail -n 50) | tee -a logs/consolidate.log || true
 
   echo "" | tee -a logs/consolidate.log
   echo "--- last job.log (if any) ---" | tee -a logs/consolidate.log
