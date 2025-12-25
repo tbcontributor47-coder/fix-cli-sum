@@ -7,7 +7,7 @@ COPY app/ /app/
 
 # Minimal tools + uv/uvx pinned install.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates curl \
+  && apt-get install -y --no-install-recommends bash ca-certificates curl \
   && rm -rf /var/lib/apt/lists/* \
   && curl -LsSf https://astral.sh/uv/0.9.5/install.sh | sh \
   && ln -sf /root/.local/bin/uv /usr/local/bin/uv \

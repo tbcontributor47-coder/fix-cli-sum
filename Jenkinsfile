@@ -14,8 +14,6 @@ pipeline {
     OPENAI_BASE_URL = 'https://api.portkey.ai/v1'
     // Set to 'true' in Jenkins job env to push logs back to Git.
     PUSH_LOGS_TO_GIT = 'false'
-    // Override Docker Compose project name to avoid @ characters from workspace suffixes
-    COMPOSE_PROJECT_NAME = 'fixclisum'
   }
 
   stages {
@@ -67,6 +65,51 @@ fi
   export PATH="$HOME/.local/bin:$PATH"
   harbor --help >/dev/null
 ) 2>&1 | tee logs/preflight.log
+'''
+      }
+    }
+
+    stage('Workspace Permissions (read-only)') {
+      steps {
+        sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+mkdir -p logs
+
+echo "===== Workspace permissions snapshot =====" | tee logs/permissions.log
+echo "Node: $(hostname)" | tee -a logs/permissions.log
+echo "User: $(id)" | tee -a logs/permissions.log
+echo "Umask: $(umask)" | tee -a logs/permissions.log
+echo "Workspace: $WORKSPACE" | tee -a logs/permissions.log
+
+echo "--- ls -ld workspace (look for trailing '+' indicating ACLs) ---" | tee -a logs/permissions.log
+ls -ld "$WORKSPACE" | tee -a logs/permissions.log || true
+
+echo "--- ls -ld logs/ jobs/ (if present) ---" | tee -a logs/permissions.log
+ls -ld "$WORKSPACE/logs" "$WORKSPACE/jobs" 2>/dev/null | tee -a logs/permissions.log || true
+
+echo "--- numeric ownership (workspace) ---" | tee -a logs/permissions.log
+ls -lan "$WORKSPACE" | head -n 50 | tee -a logs/permissions.log || true
+
+echo "--- filesystem type/mount ---" | tee -a logs/permissions.log
+df -Th "$WORKSPACE" | tee -a logs/permissions.log || true
+mount | grep "$(df -P "$WORKSPACE" | tail -1 | awk '{print $1}')" -n | tee -a logs/permissions.log || true
+
+if command -v getfacl >/dev/null 2>&1; then
+  echo "--- getfacl (workspace) ---" | tee -a logs/permissions.log
+  getfacl -p "$WORKSPACE" | tee logs/workspace.acl.txt | tee -a logs/permissions.log || true
+
+  # Heuristic: ACLs beyond the basic owner/group/other often show as extra 'user:'/'group:' entries or a 'mask:'.
+  if grep -Eq '^(user:|group:|mask:)' logs/workspace.acl.txt; then
+    echo "NOTE: workspace has ACL entries (see logs/workspace.acl.txt)" | tee -a logs/permissions.log
+  else
+    echo "NOTE: no ACL entries detected in getfacl output" | tee -a logs/permissions.log
+  fi
+else
+  echo "NOTE: getfacl not installed; cannot print ACLs" | tee -a logs/permissions.log
+fi
+
+echo "===== End snapshot =====" | tee -a logs/permissions.log
 '''
       }
     }
@@ -170,33 +213,6 @@ PY
 '''
       }
     }
-
-      stage('Oracle Compose Debug') {
-        steps {
-          sh '''#!/usr/bin/env bash
-  set -euo pipefail
-
-  echo "Starting compose debug environment..."
-  cd "$WORKSPACE"
-  docker compose -f environment/docker-compose-debug.yml --project-directory . up --build -d
-  sleep 2
-
-  CONTAINER_NAME="environment-main-1"
-  echo "Running verifier inside compose container ($CONTAINER_NAME)"
-  docker exec "$CONTAINER_NAME" sh -c "/work/tests/test.sh" || true
-
-  echo "Copying reward from named volume 'fixcli-logs' into workspace (if present)"
-  docker run --rm -v fixcli-logs:/logs -v "$WORKSPACE:/out" busybox \
-    sh -c 'cp /logs/verifier/reward.txt /out/ 2>/dev/null || true; ls -l /logs/verifier || true'
-
-  echo "Compose logs:"
-  docker compose -f environment/docker-compose-debug.yml --project-directory . logs --no-color --tail=200 || true
-
-  docker compose -f environment/docker-compose-debug.yml --project-directory . down || true
-  echo "Compose debug finished"
-  '''
-        }
-      }
 
       stage('Checks') {
       steps {
