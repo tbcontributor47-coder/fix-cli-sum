@@ -477,28 +477,30 @@ run_many() {
   local n="$3"
   local pass=0
 
-  echo "" | tee -a logs/difficulty-5x.log
-  echo "--- $label ($model): ${n} runs ---" | tee -a logs/difficulty-5x.log
+  # NOTE: This function is called inside command substitution; send progress to stderr
+  # so Jenkins streams it live, while stdout remains reserved for the final pass count.
+  echo "" | tee -a logs/difficulty-5x.log >&2
+  echo "--- $label ($model): ${n} runs ---" | tee -a logs/difficulty-5x.log >&2
 
   for i in $(seq 1 "$n"); do
-    echo "Run ${i}/${n}: $label" | tee -a logs/difficulty-5x.log
-    harbor run -a terminus-2 -m "$model" -p "$TASK_ABS" 2>&1 | tee "logs/difficulty-${label}-${i}.log"
+    echo "Run ${i}/${n}: $label" | tee -a logs/difficulty-5x.log >&2
+    harbor run -a terminus-2 -m "$model" -p "$TASK_ABS" 2>&1 | tee "logs/difficulty-${label}-${i}.log" >&2
 
     RESULT_JSON="$(awk '/Results written to /{print $NF}' "logs/difficulty-${label}-${i}.log" | tail -n1)"
     if [ -z "$RESULT_JSON" ]; then
-      echo "ERROR: Could not find result.json path in logs/difficulty-${label}-${i}.log" | tee -a logs/difficulty-5x.log
+      echo "ERROR: Could not find result.json path in logs/difficulty-${label}-${i}.log" | tee -a logs/difficulty-5x.log >&2
       continue
     fi
     if [ ! -f "$RESULT_JSON" ] && [ -f "$WORKSPACE/$RESULT_JSON" ]; then
       RESULT_JSON="$WORKSPACE/$RESULT_JSON"
     fi
     if [ ! -f "$RESULT_JSON" ]; then
-      echo "ERROR: Harbor result file not found: $RESULT_JSON" | tee -a logs/difficulty-5x.log
+      echo "ERROR: Harbor result file not found: $RESULT_JSON" | tee -a logs/difficulty-5x.log >&2
       continue
     fi
 
     # Extract the eval mean (single-trial reward) from result.json.
-    MEAN="$((python3 - "$RESULT_JSON" <<'PY'
+    MEAN="$(python3 - "$RESULT_JSON" <<'PY'
 import json
 import sys
 
@@ -537,9 +539,9 @@ PY
 
     if [ "$MEAN" = "1" ] || [ "$MEAN" = "1.0" ]; then
       pass=$((pass + 1))
-      echo "  result: PASS (mean=$MEAN)" | tee -a logs/difficulty-5x.log
+      echo "  result: PASS (mean=$MEAN)" | tee -a logs/difficulty-5x.log >&2
     else
-      echo "  result: FAIL (mean=${MEAN:-?})" | tee -a logs/difficulty-5x.log
+      echo "  result: FAIL (mean=${MEAN:-?})" | tee -a logs/difficulty-5x.log >&2
     fi
   done
 

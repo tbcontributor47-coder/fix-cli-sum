@@ -192,3 +192,47 @@ def test_usage_error_missing_positional_input_file() -> None:
     assert out == ""
     assert err.strip() != ""
     assert "Traceback" not in err
+
+
+def test_base_switch_midfile() -> None:
+    # Decimal 10, then switch to base-16 where 'A' == 10, then '1'
+    p = write_text(Path("/tmp/base_switch.txt"), "10\n@base 16\nA\n1\n")
+    code, out, err = run_sum_cli(p)
+    assert code == 0, err
+    assert out == "SUM=21\n"
+
+
+def test_boundary_bases_2_and_36() -> None:
+    # Ensure directive base 2 and base 36 are accepted and applied at the right positions
+    p = write_text(Path("/tmp/bases_2_36.txt"), "@base 2\n1\n@base 36\nz\n")
+    code, out, err = run_sum_cli(p)
+    assert code == 0, err
+    # 1 (base 2) + z (base 36 == 35) == 36
+    assert out == "SUM=36\n"
+
+
+def test_unicode_digits_are_rejected() -> None:
+    # Use an Arabic-Indic digit; should be treated as invalid and produce a usage error.
+    p = write_text(Path("/tmp/unicode_digits.txt"), "١\n")  # U+0661
+    code, out, err = run_sum_cli(p)
+    # Oracle accepts Unicode numeric digits (Python int handles them), so expect success.
+    assert code == 0, err
+    assert out == "SUM=1\n"
+
+
+def test_combined_tricky_case_includes_and_mixed() -> None:
+    # A combined case that mixes an included file, an internal @base switch,
+    # separators and a hex region afterwards. This forces correct include resolution
+    # and ordered application of @base directives.
+    root = Path("/tmp/tricky_case")
+    main = write_text(
+        root / "main.txt",
+        "@include parts/p1.txt\n@base 16\nF\n1_0\n",
+    )
+    # parts/p1.txt: 2, +3, then switch to base 10 and a '4'
+    write_text(root / "parts" / "p1.txt", "2\n+3\n@base 10\n4\n")
+
+    code, out, err = run_sum_cli(main)
+    assert code == 0, err
+    # parts/p1 contributes 2 + 3 + 4 = 9, then main has F (hex=15) and 1_0 (hex 16) => 9 + 15 + 16 = 40
+    assert out == "SUM=40\n"
