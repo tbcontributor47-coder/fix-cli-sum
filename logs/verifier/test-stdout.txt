@@ -1,0 +1,136 @@
+Python: 3.13.11 (main, Dec  8 2025, 23:38:56) [GCC 12.2.0]
+pip 25.3 from /usr/local/lib/python3.13/site-packages/pip (python 3.13)
+============================= test session starts ==============================
+platform linux -- Python 3.13.11, pytest-8.4.1, pluggy-1.6.0
+rootdir: /tests
+plugins: json-ctrf-0.3.5
+collected 12 items
+
+../tests/test_compare.py ....F.F..FFF                                    [100%]
+
+=================================== FAILURES ===================================
+_______________________ test_trailing_whitespace_ignored _______________________
+
+    def test_trailing_whitespace_ignored():
+        rc, out, _ = _run({"s": "a \n"}, {"s": "a\n"})
+>       _assert_equal(rc, out)
+
+/tests/test_compare.py:74: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+rc = 2, out = 'NOT_EQUAL\nFIRST_DIFF /s\nEXPECTED "a \\n"\nACTUAL "a\\n"\n'
+
+    def _assert_equal(rc, out):
+>       assert rc == 0
+E       assert 2 == 0
+
+/tests/test_compare.py:35: AssertionError
+_________________________ test_number_tolerance_equal __________________________
+
+    def test_number_tolerance_equal():
+        rc, out, _ = _run({"n": 1.0}, {"n": 1.0009}, ["--tolerance", "0.001"])
+>       _assert_equal(rc, out)
+
+/tests/test_compare.py:84: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+rc = 2, out = 'NOT_EQUAL\nFIRST_DIFF /n\nEXPECTED 1.0\nACTUAL 1.0009\n'
+
+    def _assert_equal(rc, out):
+>       assert rc == 0
+E       assert 2 == 0
+
+/tests/test_compare.py:35: AssertionError
+______________________ test_items_array_order_insensitive ______________________
+
+    def test_items_array_order_insensitive():
+        rc, out, _ = _run({"items": [{"id": 1}, {"id": 2}]}, {"items": [{"id": 2}, {"id": 1}]})
+>       _assert_equal(rc, out)
+
+/tests/test_compare.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+rc = 2, out = 'NOT_EQUAL\nFIRST_DIFF /items/0/id\nEXPECTED 1\nACTUAL 2\n'
+
+    def _assert_equal(rc, out):
+>       assert rc == 0
+E       assert 2 == 0
+
+/tests/test_compare.py:35: AssertionError
+________________________ test_items_multiset_duplicates ________________________
+
+    def test_items_multiset_duplicates():
+        rc, out, _ = _run({"items": [1, 1, 2]}, {"items": [1, 2, 2]})
+        lines = _assert_not_equal(rc, out)
+>       assert lines[1] == "FIRST_DIFF /items"
+E       AssertionError: assert 'FIRST_DIFF /items/1' == 'FIRST_DIFF /items'
+E         
+E         - FIRST_DIFF /items
+E         + FIRST_DIFF /items/1
+E         ?                  ++
+
+/tests/test_compare.py:106: AssertionError
+______________________ test_ignore_pointer_nested_subtree ______________________
+
+    def test_ignore_pointer_nested_subtree():
+        expected = {"meta": {"generated_at": "2020-01-01T00:00:00Z", "version": 1}, "data": {"x": 1}}
+        actual = {"meta": {"generated_at": "2021-01-01T00:00:00Z", "version": 1}, "data": {"x": 1}}
+    
+        rc, out, _ = _run(expected, actual, ["--ignore", "/meta/generated_at"])
+>       _assert_equal(rc, out)
+
+/tests/test_compare.py:114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+rc = 2
+out = 'NOT_EQUAL\nFIRST_DIFF /meta/generated_at\nEXPECTED "2020-01-01T00:00:00Z"\nACTUAL "2021-01-01T00:00:00Z"\n'
+
+    def _assert_equal(rc, out):
+>       assert rc == 0
+E       assert 2 == 0
+
+/tests/test_compare.py:35: AssertionError
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED ../tests/test_compare.py::test_equal_simple
+PASSED ../tests/test_compare.py::test_extra_key_fails
+PASSED ../tests/test_compare.py::test_missing_key_fails
+PASSED ../tests/test_compare.py::test_null_not_missing
+PASSED ../tests/test_compare.py::test_internal_whitespace_not_ignored
+PASSED ../tests/test_compare.py::test_number_tolerance_not_equal
+PASSED ../tests/test_compare.py::test_array_order_sensitive_by_default
+FAILED ../tests/test_compare.py::test_trailing_whitespace_ignored - assert 2 ...
+FAILED ../tests/test_compare.py::test_number_tolerance_equal - assert 2 == 0
+FAILED ../tests/test_compare.py::test_items_array_order_insensitive - assert ...
+FAILED ../tests/test_compare.py::test_items_multiset_duplicates - AssertionEr...
+FAILED ../tests/test_compare.py::test_ignore_pointer_nested_subtree - assert ...
+========================= 5 failed, 7 passed in 0.69s ==========================
+PYTEST_EXIT=1
+Wrote reward=0
+Python: 3.13.11 (main, Dec  8 2025, 23:38:56) [GCC 12.2.0]
+pip 25.3 from /usr/local/lib/python3.13/site-packages/pip (python 3.13)
+============================= test session starts ==============================
+platform linux -- Python 3.13.11, pytest-8.4.1, pluggy-1.6.0
+rootdir: /
+plugins: json-ctrf-0.3.5
+collected 12 items
+
+../tests/test_compare.py ............                                    [100%]
+
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED ../tests/test_compare.py::test_equal_simple
+PASSED ../tests/test_compare.py::test_extra_key_fails
+PASSED ../tests/test_compare.py::test_missing_key_fails
+PASSED ../tests/test_compare.py::test_null_not_missing
+PASSED ../tests/test_compare.py::test_trailing_whitespace_ignored
+PASSED ../tests/test_compare.py::test_internal_whitespace_not_ignored
+PASSED ../tests/test_compare.py::test_number_tolerance_equal
+PASSED ../tests/test_compare.py::test_number_tolerance_not_equal
+PASSED ../tests/test_compare.py::test_array_order_sensitive_by_default
+PASSED ../tests/test_compare.py::test_items_array_order_insensitive
+PASSED ../tests/test_compare.py::test_items_multiset_duplicates
+PASSED ../tests/test_compare.py::test_ignore_pointer_nested_subtree
+============================== 12 passed in 0.62s ==============================
+PYTEST_EXIT=0
+Wrote reward=1
