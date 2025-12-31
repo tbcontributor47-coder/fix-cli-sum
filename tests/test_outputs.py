@@ -33,6 +33,7 @@ def write_text(path: Path, text: str) -> Path:
 
 
 def test_basic_numbers_and_comments() -> None:
+    """Test that basic numbers and comments are parsed correctly."""
     p = write_text(
         Path("/tmp/input.txt"),
         """
@@ -50,6 +51,7 @@ def test_basic_numbers_and_comments() -> None:
 
 
 def test_strict_mode_rejects_invalid_data_line() -> None:
+    """Test that strict mode rejects lines with invalid data tokens."""
     p = write_text(Path("/tmp/strict.txt"), "1\n2\n4#bad\n")
     code, out, err = run_sum_cli(p, strict=True)
     assert code == 2
@@ -59,6 +61,7 @@ def test_strict_mode_rejects_invalid_data_line() -> None:
 
 
 def test_utf8_bom_is_accepted() -> None:
+    """Test that UTF-8 files with a BOM are accepted and parsed correctly."""
     # BOM at start of file should not break parsing.
     p = Path("/tmp/bom.txt")
     p.write_bytes(("\ufeff1\n2\n").encode("utf-8"))
@@ -68,6 +71,7 @@ def test_utf8_bom_is_accepted() -> None:
 
 
 def test_separators_and_plus_sign() -> None:
+    """Test that thousand separators and leading plus signs are handled."""
     p = write_text(Path("/tmp/seps.txt"), "+1_000\n2,000\n")
     code, out, err = run_sum_cli(p)
     assert code == 0, err
@@ -75,6 +79,7 @@ def test_separators_and_plus_sign() -> None:
 
 
 def test_base_directive_switching() -> None:
+    """Test that the @base directive correctly switches the parsing base mid-file."""
     p = write_text(Path("/tmp/base.txt"), "@base 16\nff\n@base 10\n10\n")
     code, out, err = run_sum_cli(p)
     assert code == 0, err
@@ -82,6 +87,7 @@ def test_base_directive_switching() -> None:
 
 
 def test_cli_base_overrides_default_parsing_base() -> None:
+    """Test that the --base CLI argument overrides the default parsing base."""
     p = write_text(Path("/tmp/cli_base.txt"), "ff\n")
     code, out, err = run_sum_cli(p, base=16)
     assert code == 0, err
@@ -89,6 +95,7 @@ def test_cli_base_overrides_default_parsing_base() -> None:
 
 
 def test_cli_base_validation_requires_2_to_36() -> None:
+    """Test that the --base CLI argument is validated to be between 2 and 36."""
     p = write_text(Path("/tmp/base_invalid_cli.txt"), "1\n")
     code, out, err = run_sum_cli(p, base=1)
     assert code == 2
@@ -104,6 +111,7 @@ def test_cli_base_validation_requires_2_to_36() -> None:
 
 
 def test_range_directive_large_and_reversed() -> None:
+    """Test the @range directive with large numbers and reversed endpoints."""
     # 1..100000000 => n(n+1)/2 = 5_000_000_050_000_000
     p = write_text(
         Path("/tmp/range.txt"),
@@ -115,6 +123,7 @@ def test_range_directive_large_and_reversed() -> None:
 
 
 def test_directives_malformed_or_unknown_are_errors() -> None:
+    """Test that malformed or unknown directives result in exit code 2."""
     p = write_text(
         Path("/tmp/bad_directives.txt"),
         "@unknown 1\n1\n",
@@ -141,6 +150,7 @@ def test_directives_malformed_or_unknown_are_errors() -> None:
 
 
 def test_include_relative_to_including_file() -> None:
+    """Test that @include paths are resolved relative to the including file."""
     root = Path("/tmp/include")
     main = write_text(
         root / "main.txt",
@@ -155,6 +165,7 @@ def test_include_relative_to_including_file() -> None:
 
 
 def test_missing_input_file_is_graceful() -> None:
+    """Test that a missing input file is handled gracefully with exit code 1."""
     missing = Path("/tmp/does_not_exist_12345.txt")
     if missing.exists():
         os.remove(missing)
@@ -166,6 +177,7 @@ def test_missing_input_file_is_graceful() -> None:
 
 
 def test_missing_include_file_is_graceful() -> None:
+    """Test that a missing @include file is handled gracefully with exit code 1."""
     root = Path("/tmp/missing_include")
     main = write_text(root / "main.txt", "@include sub/missing.txt\n1\n")
     code, out, err = run_sum_cli(main)
@@ -176,6 +188,7 @@ def test_missing_include_file_is_graceful() -> None:
 
 
 def test_include_cycle_is_detected() -> None:
+    """Test that circular @include dependencies are detected and result in exit code 1."""
     root = Path("/tmp/cycle")
     a = write_text(root / "a.txt", "@include b.txt\n1\n")
     write_text(root / "b.txt", "@include a.txt\n2\n")
@@ -187,6 +200,7 @@ def test_include_cycle_is_detected() -> None:
 
 
 def test_usage_error_missing_positional_input_file() -> None:
+    """Test that missing the required positional input file results in exit code 2."""
     code, out, err = run_sum_cli_raw([])
     assert code == 2
     assert out == ""
@@ -195,6 +209,7 @@ def test_usage_error_missing_positional_input_file() -> None:
 
 
 def test_base_switch_midfile() -> None:
+    """Test that Switching the base mid-file works as expected."""
     # Decimal 10, then switch to base-16 where 'A' == 10, then '1'
     p = write_text(Path("/tmp/base_switch.txt"), "10\n@base 16\nA\n1\n")
     code, out, err = run_sum_cli(p)
@@ -203,6 +218,7 @@ def test_base_switch_midfile() -> None:
 
 
 def test_boundary_bases_2_and_36() -> None:
+    """Test that the boundary bases 2 and 36 are correctly handled."""
     # Ensure directive base 2 and base 36 are accepted and applied at the right positions
     p = write_text(Path("/tmp/bases_2_36.txt"), "@base 2\n1\n@base 36\nz\n")
     code, out, err = run_sum_cli(p)
@@ -212,6 +228,7 @@ def test_boundary_bases_2_and_36() -> None:
 
 
 def test_unicode_digits_are_invalid_in_non_strict_mode() -> None:
+    """Test that Unicode digits are ignored in non-strict mode."""
     # Spec restricts digits to ASCII 0-9 and A-Z. Non-ASCII numerals are invalid tokens.
     # In non-strict mode, invalid data lines are ignored.
     p = write_text(Path("/tmp/unicode_digits.txt"), "١\n")  # U+0661
@@ -221,6 +238,7 @@ def test_unicode_digits_are_invalid_in_non_strict_mode() -> None:
 
 
 def test_unicode_digits_are_errors_in_strict_mode() -> None:
+    """Test that Unicode digits are treated as errors in strict mode."""
     p = write_text(Path("/tmp/unicode_digits_strict.txt"), "١\n")  # U+0661
     code, out, err = run_sum_cli(p, strict=True)
     assert code == 2
@@ -230,6 +248,7 @@ def test_unicode_digits_are_errors_in_strict_mode() -> None:
 
 
 def test_range_endpoints_use_current_base() -> None:
+    """Test that @range endpoints are parsed using the current active base."""
     # Ensure @range endpoints are parsed using the current base (not always base-10).
     # In base 16: a..f == 10..15, sum = 75.
     p = write_text(Path("/tmp/range_base16.txt"), "@base 16\n@range a..f\n")
@@ -239,6 +258,7 @@ def test_range_endpoints_use_current_base() -> None:
 
 
 def test_include_malformed_arguments_are_errors() -> None:
+    """Test that malformed @include arguments result in exit code 2."""
     # Malformed directives are errors.
     p = write_text(Path("/tmp/include_no_arg.txt"), "@include\n")
     code, out, err = run_sum_cli(p)
@@ -256,6 +276,7 @@ def test_include_malformed_arguments_are_errors() -> None:
 
 
 def test_combined_tricky_case_includes_and_mixed() -> None:
+    """Test a complex combination of includes, base switches, and separators."""
     # A combined case that mixes an included file, an internal @base switch,
     # separators and a hex region afterwards. This forces correct include resolution
     # and ordered application of @base directives.
